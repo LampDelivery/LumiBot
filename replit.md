@@ -20,6 +20,7 @@ A simple Discord bot built with Node.js and discord.js
 - Requires Administrator permissions to add
 
 ## Recent Changes
+- November 29, 2025: Removed all emojis from /install command for minimal design
 - November 29, 2025: Added GitHub release links to /install command (KettuManager, KettuXposed, KettuTweak, BTLoader)
 - November 29, 2025: Added /install command with interactive platform selection buttons (Android/iOS) and ephemeral responses
 - November 29, 2025: Made autoresponders server-specific instead of global
