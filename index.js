@@ -48,6 +48,13 @@ client.once('clientReady', async () => {
           .setDescription('Optional channel restriction')
           .setRequired(false)),
     new SlashCommandBuilder()
+      .setName('deleteresponder')
+      .setDescription('Delete an autoresponder')
+      .addStringOption(option =>
+        option.setName('trigger')
+          .setDescription('Trigger phrase to delete')
+          .setRequired(true)),
+    new SlashCommandBuilder()
       .setName('install')
       .setDescription('Get Kettu installation instructions')
   ];
@@ -165,6 +172,37 @@ client.on('interactionCreate', async (interaction) => {
     });
 
     await interaction.reply(`✅ Autoresponder added for trigger: "${trigger}"${channel ? ` in ${channel}` : ''}`);
+  }
+
+  if (interaction.commandName === 'deleteresponder') {
+    if (!interaction.member.permissions.has('Administrator')) {
+      return interaction.reply({
+        content: '❌ You need Administrator permissions to use this command.',
+        ephemeral: true
+      });
+    }
+
+    const guildId = interaction.guildId;
+    const trigger = interaction.options.getString('trigger').toLowerCase();
+    
+    if (!responders[guildId] || responders[guildId].length === 0) {
+      return interaction.reply({
+        content: '❌ No autoresponders exist for this server.',
+        ephemeral: true
+      });
+    }
+
+    const index = responders[guildId].findIndex(r => r.trigger === trigger);
+    
+    if (index === -1) {
+      return interaction.reply({
+        content: `❌ No autoresponder found with trigger: "${trigger}"`,
+        ephemeral: true
+      });
+    }
+
+    responders[guildId].splice(index, 1);
+    await interaction.reply(`✅ Autoresponder deleted for trigger: "${trigger}"`);
   }
 });
 
