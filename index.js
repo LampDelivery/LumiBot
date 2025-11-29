@@ -349,7 +349,9 @@ client.on('interactionCreate', async (interaction) => {
     const match = intervalStr.match(/^(\d+)(m|h|d)$/i);
     const displayInterval = `${match[1]} ${units[match[2].toLowerCase()]}`;
 
-    await interaction.reply(`✅ Minky images will be sent to ${channel} every ${displayInterval}!`);
+    await interaction.reply(`✅ Minky images will be sent to ${channel} every ${displayInterval}! Sending the first one now...`);
+    
+    await sendMinkyToChannel(channel);
   }
 
   if (interaction.commandName === 'stopminky') {
