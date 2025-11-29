@@ -19,10 +19,12 @@ Preferred communication style: Simple, everyday language.
 - **Slash Commands**: Native Discord slash command registration using REST API
 - **Command Types**:
   - `/minky` - Image sharing with embedded responses (pink theme)
+  - `/minkyinterval` - Admin-only command to schedule automatic Minky images at set intervals (e.g., 30m, 1h, 6h, 1d)
+  - `/stopminky` - Admin-only command to stop scheduled Minky images for a channel
   - `/install` - Interactive installation guide with button-based platform selection (Android/iOS)
   - `/addresponder` - Admin-only command for creating autoresponders
   - `/deleteresponder` - Admin-only command for removing autoresponders
-- **Permission Model**: Administrator permission checks enforced for autoresponder management
+- **Permission Model**: Administrator permission checks enforced for autoresponder and Minky interval management
 
 ### Autoresponder Architecture
 - **Storage**: In-memory storage using a JavaScript object keyed by guild ID
