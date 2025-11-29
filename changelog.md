@@ -8,3 +8,7 @@
 - November 29, 2025: Added autoresponder feature with /addresponder command
 - November 29, 2025: Added /minky command with embed format
 - November 29, 2025: Initial project setup with discord.js
+
+## User Preferences
+- Node.js runtime
+- discord.js library for Discord API interaction
