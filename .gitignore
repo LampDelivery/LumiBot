@@ -3,3 +3,7 @@ node_modules/
 *.log
 npm-debug.log*
 .DS_Store
+
+# Replit config files
+replit.md
+.replit

@@ -8,6 +8,17 @@ This is a Discord bot built with Node.js and discord.js v14. The bot provides sl
 
 Preferred communication style: Simple, everyday language.
 
+## Project Structure
+
+```
+├── src/
+│   └── index.js          # Main bot code
+├── assets/               # Screenshots and assets
+├── package.json          # Dependencies and scripts
+├── changelog.md          # Version history
+└── README.md             # Project documentation
+```
+
 ## System Architecture
 
 ### Bot Framework
@@ -19,7 +30,7 @@ Preferred communication style: Simple, everyday language.
 ### Command System
 - **Slash Commands**: Native Discord slash command registration using REST API
 - **Command Types**:
-  - `/minky` - Image sharing with embedded responses (pink theme)
+  - `/minky` - Image sharing with file attachments
   - `/minkyinterval` - Admin-only command to schedule automatic Minky images at set intervals (e.g., 30m, 1h, 6h, 1d). Sends an immediate first image when set up.
   - `/stopminky` - Admin-only command to stop scheduled Minky images for a channel
   - `/install` - Interactive installation guide with button-based platform selection (Android/iOS)
