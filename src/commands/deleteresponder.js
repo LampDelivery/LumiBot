@@ -41,5 +41,34 @@ module.exports = {
     responders[guildId].splice(index, 1);
     await deleteAutoresponderFromDb(guildId, trigger, deletedResponder.channelId);
     await interaction.reply(`✅ Autoresponder deleted for trigger: "${trigger}"`);
+  },
+
+  async executePrefix(message, args, rawArgs) {
+    if (!message.member.permissions.has('Administrator')) {
+      return message.reply('❌ You need Administrator permissions to use this command.');
+    }
+
+    const trigger = rawArgs.trim().toLowerCase();
+    
+    if (!trigger) {
+      return message.reply('❌ Usage: `l!deleteresponder <trigger>`\nExample: `l!deleteresponder hello`');
+    }
+
+    const guildId = message.guild.id;
+    
+    if (!responders[guildId] || responders[guildId].length === 0) {
+      return message.reply('❌ No autoresponders exist for this server.');
+    }
+
+    const index = responders[guildId].findIndex(r => r.trigger === trigger);
+    
+    if (index === -1) {
+      return message.reply(`❌ No autoresponder found with trigger: "${trigger}"`);
+    }
+
+    const deletedResponder = responders[guildId][index];
+    responders[guildId].splice(index, 1);
+    await deleteAutoresponderFromDb(guildId, trigger, deletedResponder.channelId);
+    await message.reply(`✅ Autoresponder deleted for trigger: "${trigger}"`);
   }
 };

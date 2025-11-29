@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, ChannelType } = require('discord.js');
 const { minkyIntervals, deleteMinkyIntervalFromDb } = require('../utils/database');
+const { findChannel } = require('../utils/prefixParser');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -35,5 +36,34 @@ module.exports = {
     await deleteMinkyIntervalFromDb(guildId, channel.id);
 
     await interaction.reply(`✅ Stopped scheduled Minky images for ${channel}.`);
+  },
+
+  async executePrefix(message, args) {
+    if (!message.member.permissions.has('Administrator')) {
+      return message.reply('❌ You need Administrator permissions to use this command.');
+    }
+
+    if (args.length < 1) {
+      return message.reply('❌ Usage: `l!stopminky <#channel>`\nExample: `l!stopminky #general`');
+    }
+
+    const channel = findChannel(message.guild, args[0]);
+    
+    if (!channel) {
+      return message.reply('❌ Invalid channel. Mention a channel like `#general`.');
+    }
+
+    const guildId = message.guild.id;
+    const key = `${guildId}-${channel.id}`;
+
+    if (!minkyIntervals[key]) {
+      return message.reply(`❌ No scheduled Minky images found for ${channel}.`);
+    }
+
+    clearInterval(minkyIntervals[key].timer);
+    delete minkyIntervals[key];
+    await deleteMinkyIntervalFromDb(guildId, channel.id);
+
+    await message.reply(`✅ Stopped scheduled Minky images for ${channel}.`);
   }
 };

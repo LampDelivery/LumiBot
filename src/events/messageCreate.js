@@ -1,5 +1,6 @@
 const { responders } = require('../utils/database');
 const { sendMinkyToChannel } = require('../utils/helpers');
+const { parseMessage } = require('../utils/prefixParser');
 
 module.exports = {
   name: 'messageCreate',
@@ -10,6 +11,20 @@ module.exports = {
     if (!message.guild) {
       await sendMinkyToChannel(message.channel);
       return;
+    }
+
+    const parsed = parseMessage(message);
+    if (parsed) {
+      const command = message.client.commands.get(parsed.commandName);
+      if (command && command.executePrefix) {
+        try {
+          await command.executePrefix(message, parsed.args, parsed.rawArgs);
+        } catch (error) {
+          console.error(`Error executing prefix command ${parsed.commandName}:`, error);
+          await message.reply('❌ There was an error executing this command.');
+        }
+        return;
+      }
     }
 
     const guildResponders = responders[message.guild.id] || [];
