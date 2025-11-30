@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, ActivityType } = require('discord.js');
+const { saveBotStatus } = require('../utils/database');
 
 const OWNER_ID = process.env.DISCORD_OWNER_ID;
 
@@ -65,6 +66,8 @@ module.exports = {
         status: status
       });
 
+      await saveBotStatus(status, activity, message);
+
       await interaction.reply({
         content: `✅ Bot status updated to **${status}** - ${activityTypeNames[activity]} ${message}`,
         ephemeral: true
@@ -106,6 +109,8 @@ module.exports = {
         activities: [{ name: statusMessage, type: activityTypes[activity] }],
         status: status
       });
+
+      await saveBotStatus(status, activity, statusMessage);
 
       await message.reply(`✅ Bot status updated to **${status}** - ${activityTypeNames[activity]} ${statusMessage}`);
     } catch (err) {

@@ -85,6 +85,28 @@ async function loadMinkyIntervalsFromDb() {
   }
 }
 
+async function saveBotStatus(status, activity, message) {
+  try {
+    await pool.query('DELETE FROM bot_status');
+    await pool.query(
+      'INSERT INTO bot_status (status, activity, message) VALUES ($1, $2, $3)',
+      [status, activity, message]
+    );
+  } catch (err) {
+    console.error('Error saving bot status:', err);
+  }
+}
+
+async function loadBotStatus() {
+  try {
+    const result = await pool.query('SELECT * FROM bot_status LIMIT 1');
+    return result.rows[0] || null;
+  } catch (err) {
+    console.error('Error loading bot status:', err);
+    return null;
+  }
+}
+
 module.exports = {
   pool,
   responders,
@@ -94,5 +116,7 @@ module.exports = {
   deleteAutoresponderFromDb,
   saveMinkyInterval,
   deleteMinkyIntervalFromDb,
-  loadMinkyIntervalsFromDb
+  loadMinkyIntervalsFromDb,
+  saveBotStatus,
+  loadBotStatus
 };

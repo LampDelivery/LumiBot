@@ -1,6 +1,14 @@
-const { REST, Routes } = require('discord.js');
-const { loadAutoresponders, loadMinkyIntervalsFromDb, minkyIntervals } = require('../utils/database');
+const { REST, Routes, ActivityType } = require('discord.js');
+const { loadAutoresponders, loadMinkyIntervalsFromDb, minkyIntervals, loadBotStatus } = require('../utils/database');
 const { sendMinkyToChannel } = require('../utils/helpers');
+
+const activityTypes = {
+  playing: ActivityType.Playing,
+  streaming: ActivityType.Streaming,
+  listening: ActivityType.Listening,
+  watching: ActivityType.Watching,
+  competing: ActivityType.Competing
+};
 
 module.exports = {
   name: 'clientReady',
@@ -43,5 +51,18 @@ module.exports = {
       }
     }
     console.log(`Loaded ${intervals.length} minky intervals from database`);
+
+    const savedStatus = await loadBotStatus();
+    if (savedStatus) {
+      try {
+        await client.user.setPresence({
+          activities: [{ name: savedStatus.message, type: activityTypes[savedStatus.activity] }],
+          status: savedStatus.status
+        });
+        console.log(`Restored bot status: ${savedStatus.status} - ${savedStatus.activity} ${savedStatus.message}`);
+      } catch (err) {
+        console.error('Error restoring bot status:', err);
+      }
+    }
   }
 };
