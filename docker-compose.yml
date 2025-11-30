@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  lumibot:
+    image: ghcr.io/nyxiereal/lumibot:latest
+    container_name: lumibot
+    restart: unless-stopped
+    environment:
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
