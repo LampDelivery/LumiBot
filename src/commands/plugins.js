@@ -25,23 +25,21 @@ function parsePluginMessage(message) {
   let info = '';
   let author = message.author?.username || 'Unknown';
 
+  // First priority: look for .zip file URLs
+  const zipMatch = content.match(/<?(https?:\/\/[^\s>]+\.zip)>?/);
+  if (zipMatch) {
+    downloadLink = zipMatch[1];
+  }
+
+  // Parse description and info from lines
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     
-    if (line.startsWith('<') && line.endsWith('>')) {
-      downloadLink = line.slice(1, -1);
-    } else if (line.toLowerCase().startsWith('info:')) {
+    if (line.toLowerCase().startsWith('info:')) {
       info = line.substring(5).trim();
-    } else if (!line.startsWith('http')) {
+    } else if (!line.startsWith('http') && !line.startsWith('<')) {
       if (description) description += ' ';
       description += line;
-    }
-  }
-
-  if (!downloadLink) {
-    const linkMatch = content.match(/<?(https?:\/\/[^\s>]+\.zip)>?/);
-    if (linkMatch) {
-      downloadLink = linkMatch[1];
     }
   }
 
