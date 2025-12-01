@@ -93,6 +93,39 @@ function buildPaginationRow(page, totalPages, hasSearch = false) {
   return row;
 }
 
+async function handleButton(interaction, action, page, hasSearch) {
+  const search = hasSearch === '1' ? interaction.message.content.match(/Search results for: "([^"]+)"/)?.[1] : null;
+  const allPlugins = await fetchPlugins();
+  const filteredPlugins = search ? filterPlugins(allPlugins, search) : allPlugins;
+
+  page = parseInt(page);
+  if (action === 'next') page++;
+  if (action === 'prev') page--;
+
+  const totalPages = Math.ceil(filteredPlugins.length / PLUGINS_PER_PAGE);
+  if (page < 0 || page >= totalPages) {
+    return interaction.reply({ content: 'Invalid page.', flags: MessageFlags.Ephemeral });
+  }
+
+  const start = page * PLUGINS_PER_PAGE;
+  const pagePlugins = filteredPlugins.slice(start, start + PLUGINS_PER_PAGE);
+
+  let content = '';
+  if (search) {
+    content += `**Search results for: "${search}"** (${filteredPlugins.length} found)\n\n`;
+  } else {
+    content += `**All Plugins** (Page ${page + 1}/${totalPages})\n\n`;
+  }
+
+  pagePlugins.forEach((plugin, index) => {
+    content += formatPluginLine(plugin);
+    if (index < pagePlugins.length - 1) content += '\n\n';
+  });
+
+  const row = buildPaginationRow(page, totalPages, !!search);
+  await interaction.update({ content, components: [row] });
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('plugins')
@@ -132,39 +165,6 @@ module.exports = {
 
     const row = buildPaginationRow(page, totalPages, !!search);
     await interaction.editReply({ content, components: [row] });
-  },
-
-  async handleButton(interaction, action, page, hasSearch) {
-    const search = hasSearch === '1' ? interaction.message.content.match(/Search results for: "([^"]+)"/)?.[1] : null;
-    const allPlugins = await fetchPlugins();
-    const filteredPlugins = search ? filterPlugins(allPlugins, search) : allPlugins;
-
-    page = parseInt(page);
-    if (action === 'next') page++;
-    if (action === 'prev') page--;
-
-    const totalPages = Math.ceil(filteredPlugins.length / PLUGINS_PER_PAGE);
-    if (page < 0 || page >= totalPages) {
-      return interaction.reply({ content: 'Invalid page.', flags: MessageFlags.Ephemeral });
-    }
-
-    const start = page * PLUGINS_PER_PAGE;
-    const pagePlugins = filteredPlugins.slice(start, start + PLUGINS_PER_PAGE);
-
-    let content = '';
-    if (search) {
-      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)\n\n`;
-    } else {
-      content += `**All Plugins** (Page ${page + 1}/${totalPages})\n\n`;
-    }
-
-    pagePlugins.forEach((plugin, index) => {
-      content += formatPluginLine(plugin);
-      if (index < pagePlugins.length - 1) content += '\n\n';
-    });
-
-    const row = buildPaginationRow(page, totalPages, !!search);
-    await interaction.update({ content, components: [row] });
   },
 
   async executePrefix(message, args) {
