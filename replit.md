@@ -20,7 +20,8 @@ Preferred communication style: Simple, everyday language.
 │   │   ├── addresponder.js   # Add autoresponder (Admin)
 │   │   ├── deleteresponder.js # Delete autoresponder (Admin)
 │   │   ├── install.js        # Installation instructions
-│   │   └── setstatus.js      # Set bot status (Owner)
+│   │   ├── setstatus.js      # Set bot status (Owner)
+│   │   └── plugins.js        # Browse and search Aliucord plugins (Aliucord server only)
 │   ├── events/               # Event handler files
 │   │   ├── ready.js          # Bot ready/startup logic
 │   │   ├── interactionCreate.js # Command & button interactions
@@ -54,10 +55,11 @@ Preferred communication style: Simple, everyday language.
   - `/minky` or `l!minky` - Image sharing with file attachments
   - `/minkyinterval` or `l!minkyinterval <interval> <#channel>` - Admin-only command to schedule automatic Minky images
   - `/stopminky` or `l!stopminky <#channel>` - Admin-only command to stop scheduled Minky images
-  - `/install` or `l!install [android|ios]` - Installation guide (buttons for slash, direct platform for prefix)
+  - `/install` or `l!install` - Installation guide (Aliucord-specific, skips platform picker)
   - `/addresponder` or `l!addresponder <trigger> | <response> [#channel]` - Admin-only autoresponder creation
   - `/deleteresponder` or `l!deleteresponder <trigger>` - Admin-only autoresponder removal
   - `/setstatus` or `l!setstatus <online|idle|dnd> <message>` - Owner-only bot status
+  - `/plugins [search]` or `l!plugins [search]` - Browse Aliucord plugins with pagination (Aliucord server only)
 - **Permission Model**: Administrator permission checks enforced for autoresponder and Minky interval management. Owner-only checks for status management.
 
 ### Data Persistence
