@@ -158,50 +158,85 @@ module.exports = {
         .setRequired(false)),
 
   async execute(interaction) {
-    if (interaction.guildId !== ALIUCORD_GUILD_ID) {
-      return interaction.reply({
-        content: 'This command is only available in the Aliucord server.',
-        ephemeral: true
-      });
-    }
+    const isAliucord = interaction.guildId === ALIUCORD_GUILD_ID;
 
     await interaction.deferReply({ ephemeral: true });
 
     const search = interaction.options.getString('search');
     const allPlugins = await fetchPlugins(interaction.client);
     const plugins = filterPlugins(allPlugins, search);
-    
-    const totalPages = Math.max(1, Math.ceil(plugins.length / PLUGINS_PER_PAGE));
-    const page = 0;
 
-    const embed = createPluginEmbed(plugins, page, totalPages, search);
-    const buttons = createPaginationButtons(page, totalPages, search);
+    if (plugins.length === 0) {
+      return interaction.editReply('No plugins found.');
+    }
 
-    await interaction.editReply({
-      embeds: [embed],
-      components: plugins.length > PLUGINS_PER_PAGE ? [buttons] : []
-    });
+    if (isAliucord) {
+      const totalPages = Math.max(1, Math.ceil(plugins.length / PLUGINS_PER_PAGE));
+      const page = 0;
+
+      const embed = createPluginEmbed(plugins, page, totalPages, search);
+      const buttons = createPaginationButtons(page, totalPages, search);
+
+      await interaction.editReply({
+        embeds: [embed],
+        components: plugins.length > PLUGINS_PER_PAGE ? [buttons] : []
+      });
+    } else {
+      const start = Math.min(5, plugins.length);
+      let content = search ? `**Search results for: "${search}"** (showing first ${start})\n\n` : `**Aliucord Plugins** (showing first ${start})\n\n`;
+      
+      plugins.slice(0, 5).forEach((plugin, index) => {
+        content += `**${index + 1}. ${plugin.name}**\n`;
+        content += `${plugin.description}\n`;
+        content += `${plugin.downloadLink}\n\n`;
+      });
+
+      if (plugins.length > 5) {
+        content += `*Showing 5 of ${plugins.length} plugins. Use the search parameter to narrow results.*`;
+      }
+
+      await interaction.editReply(content);
+    }
   },
 
   async executePrefix(message, args) {
-    if (message.guild.id !== ALIUCORD_GUILD_ID) {
-      return message.reply('This command is only available in the Aliucord server.');
-    }
-
+    const isAliucord = message.guild && message.guild.id === ALIUCORD_GUILD_ID;
+    
     const search = args.join(' ') || null;
     const allPlugins = await fetchPlugins(message.client);
     const plugins = filterPlugins(allPlugins, search);
-    
-    const totalPages = Math.max(1, Math.ceil(plugins.length / PLUGINS_PER_PAGE));
-    const page = 0;
 
-    const embed = createPluginEmbed(plugins, page, totalPages, search);
-    const buttons = createPaginationButtons(page, totalPages, search);
+    if (plugins.length === 0) {
+      return message.reply('No plugins found.');
+    }
 
-    await message.reply({
-      embeds: [embed],
-      components: plugins.length > PLUGINS_PER_PAGE ? [buttons] : []
-    });
+    if (isAliucord) {
+      const totalPages = Math.max(1, Math.ceil(plugins.length / PLUGINS_PER_PAGE));
+      const page = 0;
+
+      const embed = createPluginEmbed(plugins, page, totalPages, search);
+      const buttons = createPaginationButtons(page, totalPages, search);
+
+      await message.reply({
+        embeds: [embed],
+        components: plugins.length > PLUGINS_PER_PAGE ? [buttons] : []
+      });
+    } else {
+      const start = Math.min(5, plugins.length);
+      let content = search ? `**Search results for: "${search}"** (showing first ${start})\n\n` : `**Aliucord Plugins** (showing first ${start})\n\n`;
+      
+      plugins.slice(0, 5).forEach((plugin, index) => {
+        content += `**${index + 1}. ${plugin.name}**\n`;
+        content += `${plugin.description}\n`;
+        content += `${plugin.downloadLink}\n\n`;
+      });
+
+      if (plugins.length > 5) {
+        content += `*Showing 5 of ${plugins.length} plugins. Use the search parameter to narrow results.*`;
+      }
+
+      await message.reply(content);
+    }
   },
 
   async handleButton(interaction, action, page, searchBase64) {
