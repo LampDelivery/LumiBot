@@ -172,7 +172,7 @@ async function handleButton(interaction, action, page, hasSearch) {
     if (isChannelSupported(interaction.channelId)) {
       content += '\n_ _\n-# hold this message (not the links) to install';
     } else {
-      content += '\n_ _\n-# [Preview] hold to install only works in support channels';
+      content += '\n_ _\n-# preview';
     }
 
     const row = buildPaginationRow(page, totalPages, !!search);
@@ -229,7 +229,7 @@ module.exports = {
     if (isChannelSupported(interaction.channelId)) {
       content += '\n_ _\n-# hold this message (not the links) to install';
     } else {
-      content += '\n_ _\n-# [Preview] hold to install only works in support channels';
+      content += '\n_ _\n-# preview';
     }
 
     const row = buildPaginationRow(page, totalPages, !!search);
