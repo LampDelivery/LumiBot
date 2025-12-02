@@ -120,7 +120,7 @@ function formatPluginLine(plugin) {
   return text;
 }
 
-function buildPaginationRow(page, totalPages, hasSearch = false, channelId = null, isSupported = true) {
+function buildPaginationRow(page, totalPages, hasSearch = false) {
   const row = new ActionRowBuilder();
   
   const prevBtn = new ButtonBuilder()
@@ -136,15 +136,6 @@ function buildPaginationRow(page, totalPages, hasSearch = false, channelId = nul
     .setDisabled(page === totalPages - 1);
   
   row.addComponents(prevBtn, nextBtn);
-  
-  if (!isSupported) {
-    const infoBtn = new ButtonBuilder()
-      .setCustomId('plugins_info')
-      .setLabel('ⓘ')
-      .setStyle(ButtonStyle.Secondary);
-    row.addComponents(infoBtn);
-  }
-  
   return row;
 }
 
@@ -169,9 +160,9 @@ async function handleButton(interaction, action, page, hasSearch) {
     let content = '';
     const isSupported = isChannelSupported(interaction.channelId);
     if (search) {
-      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)${!isSupported ? ' — Preview (ⓘ)' : ''}\n\n`;
+      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)\n\n`;
     } else {
-      content += `**All Plugins** (Page ${page + 1}/${totalPages})${!isSupported ? ' — Preview (ⓘ)' : ''}\n\n`;
+      content += `**All Plugins** (Page ${page + 1}/${totalPages})\n\n`;
     }
 
     pagePlugins.forEach((plugin, index) => {
@@ -183,8 +174,20 @@ async function handleButton(interaction, action, page, hasSearch) {
       content += '\n_ _\n-# hold this message (not the links) to install';
     }
 
-    const row = buildPaginationRow(page, totalPages, !!search, interaction.channelId, isSupported);
+    const row = buildPaginationRow(page, totalPages, !!search);
     await interaction.update({ content, components: [row] });
+    
+    if (!isSupported) {
+      try {
+        const msg = await interaction.followUp({
+          content: 'Use command in <#847566769258233926> for hold-to-install feature',
+          flags: MessageFlags.Ephemeral
+        });
+        setTimeout(() => msg.delete().catch(() => {}), 10000);
+      } catch (err) {
+        console.error('Error sending info message:', err);
+      }
+    }
   } catch (err) {
     console.error('Error in handleButton:', err);
   }
@@ -225,9 +228,9 @@ module.exports = {
     let content = '';
     const isSupported = isChannelSupported(interaction.channelId);
     if (search) {
-      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)${!isSupported ? ' — Preview (ⓘ)' : ''}\n\n`;
+      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)\n\n`;
     } else {
-      content += `**All Plugins** (Page ${page + 1}/${totalPages})${!isSupported ? ' — Preview (ⓘ)' : ''}\n\n`;
+      content += `**All Plugins** (Page ${page + 1}/${totalPages})\n\n`;
     }
 
     pagePlugins.forEach((plugin, index) => {
@@ -239,8 +242,20 @@ module.exports = {
       content += '\n_ _\n-# hold this message (not the links) to install';
     }
 
-    const row = buildPaginationRow(page, totalPages, !!search, interaction.channelId, isSupported);
+    const row = buildPaginationRow(page, totalPages, !!search);
     await interaction.editReply({ content, components: [row] });
+    
+    if (!isSupported) {
+      try {
+        const msg = await interaction.followUp({
+          content: 'Use command in <#847566769258233926> for hold-to-install feature',
+          flags: MessageFlags.Ephemeral
+        });
+        setTimeout(() => msg.delete().catch(() => {}), 10000);
+      } catch (err) {
+        console.error('Error sending info message:', err);
+      }
+    }
   },
 
   async executePrefix(message, args) {
@@ -262,9 +277,9 @@ module.exports = {
     let content = '';
     const isSupported = isChannelSupported(message.channelId);
     if (search) {
-      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)${!isSupported ? ' — Preview (ⓘ)' : ''}\n\n`;
+      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)\n\n`;
     } else {
-      content += `**All Plugins** (Page ${page + 1}/${totalPages})${!isSupported ? ' — Preview (ⓘ)' : ''}\n\n`;
+      content += `**All Plugins** (Page ${page + 1}/${totalPages})\n\n`;
     }
 
     pagePlugins.forEach((plugin, index) => {
@@ -276,10 +291,21 @@ module.exports = {
       content += '\n_ _\n-# hold this message (not the links) to install';
     }
 
-    const row = buildPaginationRow(page, totalPages, !!search, message.channelId, isSupported);
+    const row = buildPaginationRow(page, totalPages, !!search);
     const replyOptions = { content, components: [row] };
     
-    await message.reply(replyOptions);
+    const reply = await message.reply(replyOptions);
+    
+    if (!isSupported) {
+      try {
+        const msg = await message.reply({
+          content: 'Use command in <#847566769258233926> for hold-to-install feature'
+        });
+        setTimeout(() => msg.delete().catch(() => {}), 10000);
+      } catch (err) {
+        console.error('Error sending info message:', err);
+      }
+    }
   },
 
   async autocomplete(interaction) {
