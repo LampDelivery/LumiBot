@@ -51,6 +51,19 @@ module.exports = {
 
 async function handleButton(interaction) {
   if (interaction.customId.startsWith('plugins_')) {
+    // Handle info button
+    if (interaction.customId === 'plugins_info') {
+      try {
+        await interaction.reply({
+          content: 'Use command in https://discord.com/channels/811255666990907402/847566769258233926 for hold-to-install feature',
+          flags: MessageFlags.Ephemeral
+        });
+      } catch (error) {
+        console.error('Error handling info button:', error);
+      }
+      return;
+    }
+
     const pluginsCommand = interaction.client.commands.get('plugins');
     if (pluginsCommand && pluginsCommand.handleButton) {
       const parts = interaction.customId.split('_');

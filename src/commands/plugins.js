@@ -120,7 +120,7 @@ function formatPluginLine(plugin) {
   return text;
 }
 
-function buildPaginationRow(page, totalPages, hasSearch = false) {
+function buildPaginationRow(page, totalPages, hasSearch = false, channelId = null, isSupported = true) {
   const row = new ActionRowBuilder();
   
   const prevBtn = new ButtonBuilder()
@@ -136,6 +136,15 @@ function buildPaginationRow(page, totalPages, hasSearch = false) {
     .setDisabled(page === totalPages - 1);
   
   row.addComponents(prevBtn, nextBtn);
+  
+  if (!isSupported) {
+    const infoBtn = new ButtonBuilder()
+      .setCustomId('plugins_info')
+      .setLabel('ⓘ')
+      .setStyle(ButtonStyle.Secondary);
+    row.addComponents(infoBtn);
+  }
+  
   return row;
 }
 
@@ -160,9 +169,9 @@ async function handleButton(interaction, action, page, hasSearch) {
     let content = '';
     const isSupported = isChannelSupported(interaction.channelId);
     if (search) {
-      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)${!isSupported ? ' — Preview' : ''}\n\n`;
+      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)${!isSupported ? ' — Preview (ⓘ)' : ''}\n\n`;
     } else {
-      content += `**All Plugins** (Page ${page + 1}/${totalPages})${!isSupported ? ' — Preview' : ''}\n\n`;
+      content += `**All Plugins** (Page ${page + 1}/${totalPages})${!isSupported ? ' — Preview (ⓘ)' : ''}\n\n`;
     }
 
     pagePlugins.forEach((plugin, index) => {
@@ -174,7 +183,7 @@ async function handleButton(interaction, action, page, hasSearch) {
       content += '\n_ _\n-# hold this message (not the links) to install';
     }
 
-    const row = buildPaginationRow(page, totalPages, !!search);
+    const row = buildPaginationRow(page, totalPages, !!search, interaction.channelId, isSupported);
     await interaction.update({ content, components: [row] });
   } catch (err) {
     console.error('Error in handleButton:', err);
@@ -216,9 +225,9 @@ module.exports = {
     let content = '';
     const isSupported = isChannelSupported(interaction.channelId);
     if (search) {
-      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)${!isSupported ? ' — Preview' : ''}\n\n`;
+      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)${!isSupported ? ' — Preview (ⓘ)' : ''}\n\n`;
     } else {
-      content += `**All Plugins** (Page ${page + 1}/${totalPages})${!isSupported ? ' — Preview' : ''}\n\n`;
+      content += `**All Plugins** (Page ${page + 1}/${totalPages})${!isSupported ? ' — Preview (ⓘ)' : ''}\n\n`;
     }
 
     pagePlugins.forEach((plugin, index) => {
@@ -230,7 +239,7 @@ module.exports = {
       content += '\n_ _\n-# hold this message (not the links) to install';
     }
 
-    const row = buildPaginationRow(page, totalPages, !!search);
+    const row = buildPaginationRow(page, totalPages, !!search, interaction.channelId, isSupported);
     await interaction.editReply({ content, components: [row] });
   },
 
@@ -253,9 +262,9 @@ module.exports = {
     let content = '';
     const isSupported = isChannelSupported(message.channelId);
     if (search) {
-      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)${!isSupported ? ' — Preview' : ''}\n\n`;
+      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)${!isSupported ? ' — Preview (ⓘ)' : ''}\n\n`;
     } else {
-      content += `**All Plugins** (Page ${page + 1}/${totalPages})${!isSupported ? ' — Preview' : ''}\n\n`;
+      content += `**All Plugins** (Page ${page + 1}/${totalPages})${!isSupported ? ' — Preview (ⓘ)' : ''}\n\n`;
     }
 
     pagePlugins.forEach((plugin, index) => {
@@ -267,7 +276,7 @@ module.exports = {
       content += '\n_ _\n-# hold this message (not the links) to install';
     }
 
-    const row = buildPaginationRow(page, totalPages, !!search);
+    const row = buildPaginationRow(page, totalPages, !!search, message.channelId, isSupported);
     const replyOptions = { content, components: [row] };
     
     await message.reply(replyOptions);
