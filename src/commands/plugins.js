@@ -3,9 +3,20 @@ const { SlashCommandBuilder, MessageFlags, ActionRowBuilder, ButtonBuilder, Butt
 const MANIFEST_URL = 'https://plugins.aliucord.com/manifest.json';
 const PLUGINS_PER_PAGE = 5;
 
+// Supported channels for "hold to install" feature
+const SUPPORTED_CHANNELS = [
+  '811261298997460992',
+  '847566769258233926',
+  '875213883776847873'
+];
+
 let cachedPlugins = [];
 let cacheTimestamp = 0;
 const CACHE_DURATION = 12 * 60 * 60 * 1000; // 12 hours
+
+function isChannelSupported(channelId) {
+  return SUPPORTED_CHANNELS.includes(channelId);
+}
 
 // Force cache refresh on startup
 function clearPluginCache() {
@@ -158,7 +169,11 @@ async function handleButton(interaction, action, page, hasSearch) {
       if (index < pagePlugins.length - 1) content += '\n\n';
     });
 
-    content += '\n_ _\n-# hold this message (not the links) to install';
+    if (isChannelSupported(interaction.channelId)) {
+      content += '\n_ _\n-# hold this message (not the links) to install';
+    } else {
+      content += '\n_ _\n-# [Preview] hold to install only works in support channels';
+    }
 
     const row = buildPaginationRow(page, totalPages, !!search);
     await interaction.update({ content, components: [row] });
@@ -211,7 +226,11 @@ module.exports = {
       if (index < pagePlugins.length - 1) content += '\n\n';
     });
 
-    content += '\n_ _\n-# hold this message (not the links) to install';
+    if (isChannelSupported(interaction.channelId)) {
+      content += '\n_ _\n-# hold this message (not the links) to install';
+    } else {
+      content += '\n_ _\n-# [Preview] hold to install only works in support channels';
+    }
 
     const row = buildPaginationRow(page, totalPages, !!search);
     await interaction.editReply({ content, components: [row] });
@@ -245,7 +264,11 @@ module.exports = {
       if (index < pagePlugins.length - 1) content += '\n\n';
     });
 
-    content += '\n_ _\n-# hold this message (not the links) to install';
+    if (isChannelSupported(message.channelId)) {
+      content += '\n_ _\n-# hold this message (not the links) to install';
+    } else {
+      content += '\n_ _\n-# [Preview] hold to install only works in support channels';
+    }
 
     const row = buildPaginationRow(page, totalPages, !!search);
     const replyOptions = { content, components: [row] };
