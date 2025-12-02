@@ -1,10 +1,9 @@
 const { createClient } = require('@libsql/client');
-require('dotenv').config();
+const path = require('path');
 
-// Connect to Turso database
+// Use local SQLite database for development
 const client = createClient({
-  url: process.env.TURSO_CONNECTION_URL,
-  authToken: process.env.TURSO_AUTH_TOKEN
+  url: `file:${path.join(process.cwd(), 'bot.db')}`
 });
 
 const responders = {};
