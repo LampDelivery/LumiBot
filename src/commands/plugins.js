@@ -240,9 +240,10 @@ module.exports = {
     
     if (!isSupported) {
       try {
-        await interaction.followUp({
+        const msg = await interaction.followUp({
           content: 'Use command in <#847566769258233926> for hold-to-install feature'
         });
+        setTimeout(() => msg.delete().catch(() => {}), 30000);
       } catch (err) {
         console.error('Error sending info message:', err);
       }
