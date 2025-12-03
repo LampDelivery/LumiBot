@@ -7,7 +7,8 @@ const PLUGINS_PER_PAGE = 5;
 const SUPPORTED_CHANNELS = [
   '811261298997460992',
   '847566769258233926',
-  '875213883776847873'
+  '875213883776847873',
+  '811262084968742932'
 ];
 
 let cachedPlugins = [];
@@ -201,6 +202,22 @@ module.exports = {
         .setRequired(false)),
 
   async execute(interaction) {
+    const isSupported = isChannelSupported(interaction.channelId);
+
+    // Only allow command in supported channels
+    if (!isSupported) {
+      await interaction.deferReply();
+      try {
+        const msg = await interaction.followUp({
+          content: 'Use command in <#847566769258233926> for hold-to-install feature'
+        });
+        setTimeout(() => msg.delete().catch(() => {}), 30000);
+      } catch (err) {
+        console.error('Error sending info message:', err);
+      }
+      return;
+    }
+
     const send = interaction.options.getBoolean('send') ?? false;
     const deferOptions = send ? {} : { flags: MessageFlags.Ephemeral };
     await interaction.deferReply(deferOptions);
@@ -219,7 +236,6 @@ module.exports = {
     const pagePlugins = filteredPlugins.slice(start, start + PLUGINS_PER_PAGE);
 
     let content = '';
-    const isSupported = isChannelSupported(interaction.channelId);
     if (search) {
       content += `**Search results for: "${search}"** (${filteredPlugins.length} found)\n\n`;
     } else {
@@ -231,26 +247,28 @@ module.exports = {
       if (index < pagePlugins.length - 1) content += '\n\n';
     });
 
-    if (isSupported) {
-      content += '\n​\n-# hold this message (not the links) to install';
-    }
+    content += '\n​\n-# hold this message (not the links) to install';
 
     const row = buildPaginationRow(page, totalPages, !!search);
     await interaction.editReply({ content, components: [row] });
-    
+  },
+
+  async executePrefix(message, args) {
+    const isSupported = isChannelSupported(message.channelId);
+
+    // Only allow command in supported channels
     if (!isSupported) {
       try {
-        const msg = await interaction.followUp({
+        const msg = await message.reply({
           content: 'Use command in <#847566769258233926> for hold-to-install feature'
         });
         setTimeout(() => msg.delete().catch(() => {}), 30000);
       } catch (err) {
         console.error('Error sending info message:', err);
       }
+      return;
     }
-  },
 
-  async executePrefix(message, args) {
     const search = args.join(' ').trim() || null;
 
     const allPlugins = await fetchPlugins();
@@ -267,7 +285,6 @@ module.exports = {
     const pagePlugins = filteredPlugins.slice(start, start + PLUGINS_PER_PAGE);
 
     let content = '';
-    const isSupported = isChannelSupported(message.channelId);
     if (search) {
       content += `**Search results for: "${search}"** (${filteredPlugins.length} found)\n\n`;
     } else {
@@ -279,25 +296,10 @@ module.exports = {
       if (index < pagePlugins.length - 1) content += '\n\n';
     });
 
-    if (isSupported) {
-      content += '\n​\n-# hold this message (not the links) to install';
-    }
+    content += '\n​\n-# hold this message (not the links) to install';
 
     const row = buildPaginationRow(page, totalPages, !!search);
-    const replyOptions = { content, components: [row] };
-    
-    const reply = await message.reply(replyOptions);
-    
-    if (!isSupported) {
-      try {
-        const msg = await message.reply({
-          content: 'Use command in <#847566769258233926> for hold-to-install feature'
-        });
-        setTimeout(() => msg.delete().catch(() => {}), 10000);
-      } catch (err) {
-        console.error('Error sending info message:', err);
-      }
-    }
+    await message.reply({ content, components: [row] });
   },
 
   async autocomplete(interaction) {
