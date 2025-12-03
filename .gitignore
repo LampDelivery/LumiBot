@@ -8,3 +8,7 @@ npm-debug.log*
 *.db
 *.sqlite
 *.sqlite3
+
+# Replit config files
+replit.md
+.replit
