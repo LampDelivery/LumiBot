@@ -101,15 +101,25 @@ async function initializePluginCache() {
   await fetchPlugins();
 }
 
-function filterPlugins(plugins, search) {
-  if (!search) return plugins;
+function filterPlugins(plugins, search, author) {
+  let filtered = plugins;
   
-  const searchLower = search.toLowerCase();
-  return plugins.filter(plugin => 
-    plugin.name.toLowerCase().includes(searchLower) ||
-    plugin.description.toLowerCase().includes(searchLower) ||
-    plugin.authors.toLowerCase().includes(searchLower)
-  );
+  if (author) {
+    const authorLower = author.toLowerCase();
+    filtered = filtered.filter(plugin => 
+      plugin.authors.toLowerCase().includes(authorLower)
+    );
+  }
+  
+  if (search) {
+    const searchLower = search.toLowerCase();
+    filtered = filtered.filter(plugin => 
+      plugin.name.toLowerCase().includes(searchLower) ||
+      plugin.description.toLowerCase().includes(searchLower)
+    );
+  }
+  
+  return filtered;
 }
 
 function escapeMarkdown(text) {
@@ -125,17 +135,30 @@ function formatPluginLine(plugin) {
   return text;
 }
 
-function buildPaginationRow(page, totalPages, hasSearch = false) {
+function encodeFilter(str) {
+  if (!str) return '';
+  return Buffer.from(str).toString('base64').replace(/=/g, '');
+}
+
+function decodeFilter(str) {
+  if (!str) return null;
+  const padded = str + '='.repeat((4 - str.length % 4) % 4);
+  return Buffer.from(padded, 'base64').toString('utf8');
+}
+
+function buildPaginationRow(page, totalPages, search = null, author = null) {
   const row = new ActionRowBuilder();
+  const encodedSearch = encodeFilter(search || '');
+  const encodedAuthor = encodeFilter(author || '');
   
   const prevBtn = new ButtonBuilder()
-    .setCustomId(`plugins_prev_${page}${hasSearch ? '_1' : '_0'}`)
+    .setCustomId(`plugins_prev_${page}_${encodedSearch}_${encodedAuthor}`)
     .setLabel('Previous')
     .setStyle(ButtonStyle.Primary)
     .setDisabled(page === 0);
   
   const nextBtn = new ButtonBuilder()
-    .setCustomId(`plugins_next_${page}${hasSearch ? '_1' : '_0'}`)
+    .setCustomId(`plugins_next_${page}_${encodedSearch}_${encodedAuthor}`)
     .setLabel('Next')
     .setStyle(ButtonStyle.Primary)
     .setDisabled(page === totalPages - 1);
@@ -144,11 +167,12 @@ function buildPaginationRow(page, totalPages, hasSearch = false) {
   return row;
 }
 
-async function handleButton(interaction, action, page, hasSearch) {
+async function handleButton(interaction, action, page, encodedSearch, encodedAuthor) {
   try {
-    const search = hasSearch === '1' ? interaction.message.content.match(/Search results for: "([^"]+)"/)?.[1] : null;
+    const search = decodeFilter(encodedSearch);
+    const author = decodeFilter(encodedAuthor);
     const allPlugins = await fetchPlugins();
-    const filteredPlugins = search ? filterPlugins(allPlugins, search) : allPlugins;
+    const filteredPlugins = filterPlugins(allPlugins, search, author);
 
     page = parseInt(page);
     if (action === 'next') page++;
@@ -164,8 +188,12 @@ async function handleButton(interaction, action, page, hasSearch) {
 
     let content = '';
     const isSupported = isChannelSupported(interaction.channelId);
-    if (search) {
-      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)\n\n`;
+    const hasFilter = search || author;
+    if (hasFilter) {
+      let filterText = [];
+      if (search) filterText.push(`"${search}"`);
+      if (author) filterText.push(`by ${author}`);
+      content += `**Plugins ${filterText.join(' ')}** (${filteredPlugins.length} found)\n\n`;
     } else {
       content += `**All Plugins** (Page ${page + 1}/${totalPages})\n\n`;
     }
@@ -179,12 +207,22 @@ async function handleButton(interaction, action, page, hasSearch) {
       content += '\n​\n-# hold this message (not the links) to install';
     }
 
-    const row = buildPaginationRow(page, totalPages, !!search);
+    const row = buildPaginationRow(page, totalPages, search, author);
     await interaction.update({ content, components: [row] });
     
-    } catch (err) {
+  } catch (err) {
     console.error('Error in handleButton:', err);
   }
+}
+
+function getUniqueAuthors(plugins) {
+  const authorsSet = new Set();
+  plugins.forEach(p => {
+    if (p.authors && p.authors !== 'Unknown') {
+      p.authors.split(', ').forEach(author => authorsSet.add(author.trim()));
+    }
+  });
+  return Array.from(authorsSet).sort();
 }
 
 module.exports = {
@@ -193,7 +231,12 @@ module.exports = {
     .setDescription('Browse Aliucord plugins')
     .addStringOption(option =>
       option.setName('search')
-        .setDescription('Search for plugins by name, description, or author')
+        .setDescription('Search for plugins by name or description')
+        .setRequired(false)
+        .setAutocomplete(true))
+    .addStringOption(option =>
+      option.setName('author')
+        .setDescription('Filter plugins by author')
         .setRequired(false)
         .setAutocomplete(true))
     .addBooleanOption(option =>
@@ -223,8 +266,9 @@ module.exports = {
     await interaction.deferReply(deferOptions);
 
     const search = interaction.options.getString('search');
+    const author = interaction.options.getString('author');
     const allPlugins = await fetchPlugins();
-    const filteredPlugins = search ? filterPlugins(allPlugins, search) : allPlugins;
+    const filteredPlugins = filterPlugins(allPlugins, search, author);
 
     if (filteredPlugins.length === 0) {
       return interaction.editReply('No plugins found.');
@@ -236,8 +280,12 @@ module.exports = {
     const pagePlugins = filteredPlugins.slice(start, start + PLUGINS_PER_PAGE);
 
     let content = '';
-    if (search) {
-      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)\n\n`;
+    const hasFilter = search || author;
+    if (hasFilter) {
+      let filterText = [];
+      if (search) filterText.push(`"${search}"`);
+      if (author) filterText.push(`by ${author}`);
+      content += `**Plugins ${filterText.join(' ')}** (${filteredPlugins.length} found)\n\n`;
     } else {
       content += `**All Plugins** (Page ${page + 1}/${totalPages})\n\n`;
     }
@@ -249,7 +297,7 @@ module.exports = {
 
     content += '\n​\n-# hold this message (not the links) to install';
 
-    const row = buildPaginationRow(page, totalPages, !!search);
+    const row = buildPaginationRow(page, totalPages, search, author);
     await interaction.editReply({ content, components: [row] });
   },
 
@@ -269,10 +317,26 @@ module.exports = {
       return;
     }
 
-    const search = args.join(' ').trim() || null;
+    let search = null;
+    let author = null;
+    
+    const authorIndex = args.indexOf('-a');
+    if (authorIndex !== -1) {
+      const afterFlag = args.slice(authorIndex + 1);
+      const nextFlagIndex = afterFlag.findIndex(a => a.startsWith('-'));
+      if (nextFlagIndex === -1) {
+        author = afterFlag.join(' ').trim() || null;
+        search = args.slice(0, authorIndex).join(' ').trim() || null;
+      } else {
+        author = afterFlag.slice(0, nextFlagIndex).join(' ').trim() || null;
+        search = args.slice(0, authorIndex).join(' ').trim() || null;
+      }
+    } else {
+      search = args.join(' ').trim() || null;
+    }
 
     const allPlugins = await fetchPlugins();
-    const filteredPlugins = search ? filterPlugins(allPlugins, search) : allPlugins;
+    const filteredPlugins = filterPlugins(allPlugins, search, author);
 
     if (filteredPlugins.length === 0) {
       await message.reply('No plugins found.');
@@ -285,8 +349,12 @@ module.exports = {
     const pagePlugins = filteredPlugins.slice(start, start + PLUGINS_PER_PAGE);
 
     let content = '';
-    if (search) {
-      content += `**Search results for: "${search}"** (${filteredPlugins.length} found)\n\n`;
+    const hasFilter = search || author;
+    if (hasFilter) {
+      let filterText = [];
+      if (search) filterText.push(`"${search}"`);
+      if (author) filterText.push(`by ${author}`);
+      content += `**Plugins ${filterText.join(' ')}** (${filteredPlugins.length} found)\n\n`;
     } else {
       content += `**All Plugins** (Page ${page + 1}/${totalPages})\n\n`;
     }
@@ -298,13 +366,15 @@ module.exports = {
 
     content += '\n​\n-# hold this message (not the links) to install';
 
-    const row = buildPaginationRow(page, totalPages, !!search);
+    const row = buildPaginationRow(page, totalPages, search, author);
     await message.reply({ content, components: [row] });
   },
 
   async autocomplete(interaction) {
     try {
-      const focusedValue = interaction.options.getFocused();
+      const focusedOption = interaction.options.getFocused(true);
+      const focusedValue = focusedOption.value;
+      
       if (!focusedValue) {
         await interaction.respond([]);
         return;
@@ -313,15 +383,26 @@ module.exports = {
       const allPlugins = await fetchPlugins();
       const searchLower = focusedValue.toLowerCase();
       
-      const matches = allPlugins
-        .filter(p => p.name.toLowerCase().includes(searchLower))
-        .slice(0, 25)
-        .map(plugin => ({
-          name: plugin.name,
-          value: plugin.name
-        }));
-      
-      await interaction.respond(matches);
+      if (focusedOption.name === 'author') {
+        const authors = getUniqueAuthors(allPlugins);
+        const matches = authors
+          .filter(author => author.toLowerCase().includes(searchLower))
+          .slice(0, 25)
+          .map(author => ({
+            name: author,
+            value: author
+          }));
+        await interaction.respond(matches);
+      } else {
+        const matches = allPlugins
+          .filter(p => p.name.toLowerCase().includes(searchLower))
+          .slice(0, 25)
+          .map(plugin => ({
+            name: plugin.name,
+            value: plugin.name
+          }));
+        await interaction.respond(matches);
+      }
     } catch (err) {
       console.error('Error in autocomplete:', err);
       await interaction.respond([]).catch(() => {});

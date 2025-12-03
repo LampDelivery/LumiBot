@@ -56,10 +56,11 @@ async function handleButton(interaction) {
       const parts = interaction.customId.split('_');
       const action = parts[1]; // 'prev' or 'next'
       const page = parts[2] || '0';
-      const hasSearch = parts[3] || '0';
+      const encodedSearch = parts[3] || '';
+      const encodedAuthor = parts[4] || '';
       
       try {
-        await pluginsCommand.handleButton(interaction, action, page, hasSearch);
+        await pluginsCommand.handleButton(interaction, action, page, encodedSearch, encodedAuthor);
       } catch (error) {
         console.error('Error handling plugins button:', error);
         try {
