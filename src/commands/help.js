@@ -23,7 +23,7 @@ module.exports = {
         },
         {
           name: '⚙️ Server Commands',
-          value: '`/autoresponder [action]` - Manage custom autoresponders\n`/setstatus [status]` - Set bot status message',
+          value: '`/autoresponder [action]` - Manage custom autoresponders',
           inline: false
         },
         {
@@ -33,11 +33,10 @@ module.exports = {
         },
         {
           name: '💡 Tips',
-          value: '• Use `/plugins` in <#847566769258233926> to unlock "hold to install" feature\n• Right-click a plugin list to install directly',
+          value: '• Use `/plugins` in <#847566769258233926> to unlock "hold to install" feature',
           inline: false
         }
-      )
-      .setFooter({ text: 'For more info about specific commands, use /plugins search' });
+      );
 
     await interaction.reply({ embeds: [embed] });
   },
@@ -60,7 +59,7 @@ module.exports = {
         },
         {
           name: '⚙️ Server Commands',
-          value: '`/autoresponder [action]` - Manage custom autoresponders\n`/setstatus [status]` - Set bot status message',
+          value: '`/autoresponder [action]` - Manage custom autoresponders',
           inline: false
         },
         {
@@ -70,11 +69,10 @@ module.exports = {
         },
         {
           name: '💡 Tips',
-          value: '• Use `/plugins` in <#847566769258233926> to unlock "hold to install" feature\n• Right-click a plugin list to install directly',
+          value: '• Use `/plugins` in <#847566769258233926> to unlock "hold to install" feature',
           inline: false
         }
-      )
-      .setFooter({ text: 'For more info about specific commands, use /plugins search' });
+      );
 
     await message.reply({ embeds: [embed] });
   }
