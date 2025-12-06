@@ -77,6 +77,32 @@ async function handleButton(interaction) {
     return;
   }
 
+  if (interaction.customId.startsWith('themes_')) {
+    const themesCommand = interaction.client.commands.get('themes');
+    if (themesCommand && themesCommand.handleButton) {
+      const parts = interaction.customId.split('_');
+      const action = parts[1]; // 'prev' or 'next'
+      const page = parts[2] || '0';
+      const encodedSearch = parts[3] || '';
+      const encodedAuthor = parts[4] || '';
+      
+      try {
+        await themesCommand.handleButton(interaction, action, page, encodedSearch, encodedAuthor);
+      } catch (error) {
+        console.error('Error handling themes button:', error);
+        try {
+          await interaction.update({
+            content: '❌ Error loading themes. Please try again.',
+            components: []
+          });
+        } catch (updateError) {
+          console.error('Could not update button interaction:', updateError);
+        }
+      }
+    }
+    return;
+  }
+
   if (interaction.customId.startsWith('random_')) {
     const randomCommand = interaction.client.commands.get('random-plugin');
     if (randomCommand && randomCommand.handleRandomButton) {
