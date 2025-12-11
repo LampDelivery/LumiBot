@@ -275,8 +275,7 @@ function cleanThemeName(name) {
 }
 
 function formatUrlForMarkdown(url) {
-  // Manually encode all problematic characters for Discord markdown
-  // Decode first to avoid double-encoding, then re-encode
+  // Decode first to avoid double-encoding
   let decoded;
   try {
     decoded = decodeURIComponent(url);
@@ -284,14 +283,8 @@ function formatUrlForMarkdown(url) {
     decoded = url;
   }
   
-  // Encode spaces and parentheses
-  return decoded
-    .replace(/%20/g, ' ')  // Normalize any existing encoding
-    .replace(/%28/g, '(')
-    .replace(/%29/g, ')')
-    .replace(/ /g, '%20')
-    .replace(/\(/g, '%28')
-    .replace(/\)/g, '%29');
+  // Encode problematic characters: brackets, parentheses, angle brackets, whitespace
+  return decoded.replace(/[\[\]()<>\s]/g, match => encodeURIComponent(match));
 }
 
 function formatThemeLine(theme) {
