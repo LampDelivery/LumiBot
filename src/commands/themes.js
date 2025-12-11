@@ -269,30 +269,37 @@ function escapeMarkdownLink(text) {
   return text.replace(/\[/g, '\\[').replace(/\]/g, '\\]');
 }
 
+function cleanThemeName(name) {
+  // Remove parentheses from display name
+  return name.replace(/[()]/g, '').trim();
+}
+
 function formatUrlForMarkdown(url) {
-  // Encode spaces and parentheses for Discord markdown compatibility
+  // Manually encode all problematic characters for Discord markdown
+  // Decode first to avoid double-encoding, then re-encode
+  let decoded;
   try {
-    const parsed = new URL(url);
-    // Re-encode path segments to handle spaces and parentheses
-    const encodedPath = parsed.pathname
-      .split('/')
-      .map(segment => encodeURIComponent(decodeURIComponent(segment)))
-      .join('/');
-    parsed.pathname = encodedPath;
-    return parsed.toString();
+    decoded = decodeURIComponent(url);
   } catch {
-    // Fallback: manually encode problematic characters
-    return url
-      .replace(/ /g, '%20')
-      .replace(/\(/g, '%28')
-      .replace(/\)/g, '%29');
+    decoded = url;
   }
+  
+  // Encode spaces and parentheses
+  return decoded
+    .replace(/%20/g, ' ')  // Normalize any existing encoding
+    .replace(/%28/g, '(')
+    .replace(/%29/g, ')')
+    .replace(/ /g, '%20')
+    .replace(/\(/g, '%28')
+    .replace(/\)/g, '%29');
 }
 
 function formatThemeLine(theme) {
   const previewUrl = getPreviewForTheme(theme);
   
-  const safeName = escapeMarkdownLink(theme.name);
+  // Clean parentheses from display name, escape brackets
+  const cleanedName = cleanThemeName(theme.name);
+  const safeName = escapeMarkdownLink(cleanedName);
   const formattedUrl = formatUrlForMarkdown(theme.url);
   
   let text = `[${safeName}](${formattedUrl})`;
