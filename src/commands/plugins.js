@@ -122,7 +122,7 @@ function filterPlugins(plugins, search, author) {
 }
 
 function escapeMarkdown(text) {
-  return text.replace(/(?:([#*_\-\[\]()!<>`~\\|:])|(^\s*\d+)(\.\s))/gm, '$2\\$1$3');
+  return text.replace(/[*_~`[\]()]/g, '\\$&');
 }
 
 function formatPluginLine(plugin) {
