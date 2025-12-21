@@ -1,8 +1,6 @@
 const { SlashCommandBuilder, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { getConfigByGuildId } = require('../utils/serverConfig');
 
-const THEMES_URL = 'https://rautobot.github.io/themes-repo/data.json';
-const THEMES_CHANNEL_ID = '824357609778708580';
-const ALIUCORD_GUILD_ID = '811255666990907402';
 const THEMES_PER_PAGE = 5;
 
 let cachedThemes = [];
@@ -65,7 +63,7 @@ function normalizeUrlForMatching(url) {
   return normalized;
 }
 
-async function fetchPreviewsFromChannel() {
+async function fetchPreviewsFromChannel(guildId) {
   const now = Date.now();
   if (previewCache.size > 0 && (now - previewCacheTimestamp) < PREVIEW_CACHE_DURATION) {
     return previewCache;
@@ -77,7 +75,13 @@ async function fetchPreviewsFromChannel() {
   }
 
   try {
-    const channel = await discordClient.channels.fetch(THEMES_CHANNEL_ID).catch(() => null);
+    const config = getConfigByGuildId(guildId);
+    if (!config.themesChannelId) {
+      console.log(`No preview channel configured for guild ${guildId}`);
+      return previewCache;
+    }
+    
+    const channel = await discordClient.channels.fetch(config.themesChannelId).catch(() => null);
     if (!channel) {
       console.log('Could not fetch themes channel');
       return previewCache;
@@ -193,13 +197,15 @@ function normalizeThemeUrl(url) {
   return decodedUrl;
 }
 
-async function fetchThemes() {
+async function fetchThemes(guildId) {
   const now = Date.now();
   if (cachedThemes.length > 0 && (now - cacheTimestamp) < CACHE_DURATION) {
     return cachedThemes;
   }
 
   try {
+    const config = getConfigByGuildId(guildId);
+    const THEMES_URL = config.themes.url;
     const response = await fetch(THEMES_URL);
     if (!response.ok) {
       console.error(`Error fetching themes: HTTP ${response.status}`);
@@ -227,7 +233,7 @@ async function fetchThemes() {
 
     cachedThemes = themes;
     cacheTimestamp = now;
-    console.log(`Fetched ${themes.length} themes from themes repo`);
+    console.log(`Fetched ${themes.length} themes from server ${guildId}`);
     return themes;
   } catch (err) {
     console.error('Error fetching themes:', err);
@@ -235,10 +241,10 @@ async function fetchThemes() {
   }
 }
 
-async function initializeThemeCache() {
+async function initializeThemeCache(guildId) {
   console.log('Initializing theme cache...');
-  await fetchThemes();
-  await fetchPreviewsFromChannel();
+  await fetchThemes(guildId);
+  await fetchPreviewsFromChannel(guildId);
 }
 
 function filterThemes(themes, search, author) {
@@ -343,7 +349,7 @@ async function handleButton(interaction, action, page, encodedSearch, encodedAut
   try {
     const search = decodeFilter(encodedSearch);
     const author = decodeFilter(encodedAuthor);
-    const allThemes = await fetchThemes();
+    const allThemes = await fetchThemes(interaction.guildId);
     const filteredThemes = filterThemes(allThemes, search, author);
 
     page = parseInt(page);
@@ -423,7 +429,7 @@ module.exports = {
 
     const search = interaction.options.getString('search');
     const author = interaction.options.getString('author');
-    const allThemes = await fetchThemes();
+    const allThemes = await fetchThemes(interaction.guildId);
     const filteredThemes = filterThemes(allThemes, search, author);
 
     if (filteredThemes.length === 0) {
@@ -431,7 +437,7 @@ module.exports = {
     }
 
     if (previewCache.size === 0) {
-      await fetchPreviewsFromChannel();
+      await fetchPreviewsFromChannel(interaction.guildId);
     }
 
     const page = 0;
@@ -482,7 +488,7 @@ module.exports = {
       search = args.join(' ').trim() || null;
     }
 
-    const allThemes = await fetchThemes();
+    const allThemes = await fetchThemes(message.guildId);
     const filteredThemes = filterThemes(allThemes, search, author);
 
     if (filteredThemes.length === 0) {
@@ -491,7 +497,7 @@ module.exports = {
     }
 
     if (previewCache.size === 0) {
-      await fetchPreviewsFromChannel();
+      await fetchPreviewsFromChannel(message.guildId);
     }
 
     const page = 0;
@@ -531,7 +537,7 @@ module.exports = {
         return;
       }
 
-      const allThemes = await fetchThemes();
+      const allThemes = await fetchThemes(interaction.guildId);
       const searchLower = focusedValue.toLowerCase();
       
       if (focusedOption.name === 'author') {

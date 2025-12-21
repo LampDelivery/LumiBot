@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { getConfigByGuildId } = require('../utils/serverConfig');
 
-const MANIFEST_URL = 'https://plugins.aliucord.com/manifest.json';
 const PLUGINS_PER_PAGE = 5;
 
 // Supported channels for "hold to install" feature
@@ -52,13 +52,16 @@ function normalizePluginUrl(url) {
   return url;
 }
 
-async function fetchPlugins() {
+async function fetchPlugins(guildId) {
   const now = Date.now();
   if (cachedPlugins.length > 0 && (now - cacheTimestamp) < CACHE_DURATION) {
     return cachedPlugins;
   }
 
   try {
+    const config = getConfigByGuildId(guildId);
+    const MANIFEST_URL = config.plugins.url;
+    
     const response = await fetch(MANIFEST_URL);
     if (!response.ok) {
       console.error(`Error fetching manifest: HTTP ${response.status}`);
@@ -87,7 +90,7 @@ async function fetchPlugins() {
 
     cachedPlugins = plugins;
     cacheTimestamp = now;
-    console.log(`Fetched ${plugins.length} plugins from Aliucord manifest`);
+    console.log(`Fetched ${plugins.length} plugins from server ${guildId}`);
     return plugins;
   } catch (err) {
     console.error('Error fetching plugins from manifest:', err);
@@ -170,7 +173,7 @@ async function handleButton(interaction, action, page, encodedSearch, encodedAut
   try {
     const search = decodeFilter(encodedSearch);
     const author = decodeFilter(encodedAuthor);
-    const allPlugins = await fetchPlugins();
+    const allPlugins = await fetchPlugins(interaction.guildId);
     const filteredPlugins = filterPlugins(allPlugins, search, author);
 
     page = parseInt(page);
@@ -266,7 +269,7 @@ module.exports = {
 
     const search = interaction.options.getString('search');
     const author = interaction.options.getString('author');
-    const allPlugins = await fetchPlugins();
+    const allPlugins = await fetchPlugins(interaction.guildId);
     const filteredPlugins = filterPlugins(allPlugins, search, author);
 
     if (filteredPlugins.length === 0) {
@@ -334,7 +337,7 @@ module.exports = {
       search = args.join(' ').trim() || null;
     }
 
-    const allPlugins = await fetchPlugins();
+    const allPlugins = await fetchPlugins(message.guildId);
     const filteredPlugins = filterPlugins(allPlugins, search, author);
 
     if (filteredPlugins.length === 0) {
@@ -379,7 +382,7 @@ module.exports = {
         return;
       }
 
-      const allPlugins = await fetchPlugins();
+      const allPlugins = await fetchPlugins(interaction.guildId);
       const searchLower = focusedValue.toLowerCase();
       
       if (focusedOption.name === 'author') {
