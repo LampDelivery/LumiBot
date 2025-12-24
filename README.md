@@ -1,4 +1,5 @@
-<h1 style="text-align:center;">Discord Lumi Bot</h1>
+<div align="center">
+# Discord Lumi Bot
 
 <p align="center">
   <img src="https://github.com/LampDelivery/LumiBot/blob/main/assets/icon.jpg" alt="Lumi icon" width="200px" style="border-radius: 20%" />
@@ -10,10 +11,10 @@
 </p>
 
 
-<h2 style="text-align:center;">Overview</h2>
-<p style="text-align:center;">A simple Discord bot built with Node.js and discord.js, mainly used to send minky pictures</p>
+## Overview
+A simple Discord bot built with Node.js and discord.js, mainly used to send minky pictures
 
-<p style="text-align:center;">Here's a random minky 🐱</p>
+Here's a random minky 🐱
 ![minky](https://minky.materii.dev)
 
 
