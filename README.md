@@ -1,7 +1,8 @@
 # Discord Lumi Bot
+<img src="https://github.com/LampDelivery/LumiBot/blob/main/assets/icon.jpg" alt="Lumi icon" width="200px" style="border-radius: 20%" />
 <p align="center">
   
-<img src="https://github.com/LampDelivery/LumiBot/blob/main/assets/icon.jpg" alt="Lumi icon" width="200px" style="border-radius: 20%" />
+
 
 
   <a href="https://discord.gg/EsNDvBaHVU">
