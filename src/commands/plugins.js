@@ -37,6 +37,7 @@ function isChannelSupported(channelId) {
   return SUPPORTED_CHANNELS.includes(channelId);
 }
 
+// Force cache refresh on startup
 function clearPluginCache() {
   cachedPlugins = [];
   cacheTimestamp = 0;
@@ -94,7 +95,11 @@ async function fetchPlugins(guildId) {
         if (plugin.name && plugin.url) {
           let authors = 'Unknown';
           if (Array.isArray(plugin.authors)) {
-            authors = plugin.authors.map(a => typeof a === 'object' ? a.name : a).join(', ');
+            authors = plugin.authors.map(a => {
+              if (typeof a === 'string') return a;
+              if (a && typeof a === 'object' && a.name) return a.name;
+              return 'Unknown';
+            }).join(', ');
           }
           const normalizedUrl = normalizePluginUrl(plugin.url);
           plugins.push({
@@ -187,10 +192,12 @@ function buildPaginationRow(page, totalPages, search = null, author = null, plug
     .setDisabled(page === totalPages - 1);
   
   row.addComponents(prevBtn, nextBtn);
-
+  
+  // For Kettu, add copy buttons for each plugin
   if (isKettu && plugins.length > 0) {
     const rows = [row];
     
+    // Create rows with copy buttons (max 5 per row)
     let currentRow = new ActionRowBuilder();
     plugins.forEach((plugin, index) => {
       if (!plugin.url.toLowerCase().endsWith('.zip')) {
@@ -300,6 +307,7 @@ module.exports = {
   async execute(interaction) {
     const isSupported = isChannelSupported(interaction.channelId);
 
+    // Only allow command in supported channels
     if (!isSupported) {
       await interaction.deferReply();
       try {
@@ -313,6 +321,7 @@ module.exports = {
       return;
     }
 
+    // Role restriction check for support channels
     if (!hasPermission(interaction.member, interaction.channelId)) {
       return interaction.reply({
         content: '❌ You do not have permission to use this command in this channel. Please use <#811263527239024640> instead.',
@@ -366,86 +375,97 @@ module.exports = {
   },
 
   async executePrefix(message, args) {
-    const isSupported = isChannelSupported(message.channelId);
+    try {
+      const isSupported = isChannelSupported(message.channelId);
 
-    if (!isSupported) {
-      try {
-        const msg = await message.reply({
-          content: 'Please use <#811263527239024640> to use this command.'
-        });
-        setTimeout(() => msg.delete().catch(() => {}), 30000);
-      } catch (err) {
-        console.error('Error sending info message:', err);
+      // Only allow command in supported channels
+      if (!isSupported) {
+        try {
+          const msg = await message.reply({
+            content: 'Please use <#811263527239024640> to use this command.'
+          });
+          setTimeout(() => msg.delete().catch(() => {}), 30000);
+        } catch (err) {
+          console.error('Error sending info message:', err);
+        }
+        return;
       }
-      return;
-    }
-s
-    if (!hasPermission(message.member, message.channelId)) {
-      try {
-        const msg = await message.reply('❌ You do not have permission to use this command in this channel. Please use <#811263527239024640> instead.');
-        setTimeout(() => msg.delete().catch(() => {}), 15000);
-      } catch (err) {
-        console.error('Error sending permission message:', err);
-      }
-      return;
-    }
 
-    let search = null;
-    let author = null;
-    
-    const authorIndex = args.indexOf('-a');
-    if (authorIndex !== -1) {
-      const afterFlag = args.slice(authorIndex + 1);
-      const nextFlagIndex = afterFlag.findIndex(a => a.startsWith('-'));
-      if (nextFlagIndex === -1) {
-        author = afterFlag.join(' ').trim() || null;
-        search = args.slice(0, authorIndex).join(' ').trim() || null;
+      // Role restriction check for support channels
+      if (!hasPermission(message.member, message.channelId)) {
+        try {
+          const msg = await message.reply('❌ You do not have permission to use this command in this channel. Please use <#811263527239024640> instead.');
+          setTimeout(() => msg.delete().catch(() => {}), 15000);
+        } catch (err) {
+          console.error('Error sending permission message:', err);
+        }
+        return;
+      }
+
+      let search = null;
+      let author = null;
+      
+      const authorIndex = args.indexOf('-a');
+      if (authorIndex !== -1) {
+        const afterFlag = args.slice(authorIndex + 1);
+        const nextFlagIndex = afterFlag.findIndex(a => a.startsWith('-'));
+        if (nextFlagIndex === -1) {
+          author = afterFlag.join(' ').trim() || null;
+          search = args.slice(0, authorIndex).join(' ').trim() || null;
+        } else {
+          author = afterFlag.slice(0, nextFlagIndex).join(' ').trim() || null;
+          search = args.slice(0, authorIndex).join(' ').trim() || null;
+        }
       } else {
-        author = afterFlag.slice(0, nextFlagIndex).join(' ').trim() || null;
-        search = args.slice(0, authorIndex).join(' ').trim() || null;
+        search = args.join(' ').trim() || null;
       }
-    } else {
-      search = args.join(' ').trim() || null;
+
+      const allPlugins = await fetchPlugins(message.guildId);
+      const filteredPlugins = filterPlugins(allPlugins, search, author);
+
+      if (filteredPlugins.length === 0) {
+        await message.reply('No plugins found.');
+        return;
+      }
+
+      const { SERVER_CONFIGS } = require('../utils/serverConfig');
+      const isKettu = message.guildId === SERVER_CONFIGS.KETTU.guildId;
+      
+      const page = 0;
+      const totalPages = Math.ceil(filteredPlugins.length / PLUGINS_PER_PAGE);
+      const start = page * PLUGINS_PER_PAGE;
+      const pagePlugins = filteredPlugins.slice(start, start + PLUGINS_PER_PAGE);
+
+      let content = '';
+      const hasFilter = search || author;
+      if (hasFilter) {
+        let filterText = [];
+        if (search) filterText.push(`"${search}"`);
+        if (author) filterText.push(`by ${author}`);
+        content += `**Plugins ${filterText.join(' ')}** (${filteredPlugins.length} found)\n\n`;
+      } else {
+        content += `**All Plugins** (Page ${page + 1}/${totalPages})\n\n`;
+      }
+
+      pagePlugins.forEach((plugin, index) => {
+        content += formatPluginLine(plugin);
+        if (index < pagePlugins.length - 1) content += '\n\n';
+      });
+
+      if (!isKettu) {
+        content += '\n​\n-# hold this message (not the links) to install';
+      }
+
+      const rows = buildPaginationRow(page, totalPages, search, author, pagePlugins, isKettu);
+      await message.reply({ content, components: rows });
+    } catch (err) {
+      console.error('Error in executePrefix:', err);
+      try {
+        await message.reply('There was an error executing this command.');
+      } catch (replyErr) {
+        console.error('Could not send error reply:', replyErr);
+      }
     }
-
-    const allPlugins = await fetchPlugins(message.guildId);
-    const filteredPlugins = filterPlugins(allPlugins, search, author);
-
-    if (filteredPlugins.length === 0) {
-      await message.reply('No plugins found.');
-      return;
-    }
-
-    const { SERVER_CONFIGS } = require('../utils/serverConfig');
-    const isKettu = message.guildId === SERVER_CONFIGS.KETTU.guildId;
-    
-    const page = 0;
-    const totalPages = Math.ceil(filteredPlugins.length / PLUGINS_PER_PAGE);
-    const start = page * PLUGINS_PER_PAGE;
-    const pagePlugins = filteredPlugins.slice(start, start + PLUGINS_PER_PAGE);
-
-    let content = '';
-    const hasFilter = search || author;
-    if (hasFilter) {
-      let filterText = [];
-      if (search) filterText.push(`"${search}"`);
-      if (author) filterText.push(`by ${author}`);
-      content += `**Plugins ${filterText.join(' ')}** (${filteredPlugins.length} found)\n\n`;
-    } else {
-      content += `**All Plugins** (Page ${page + 1}/${totalPages})\n\n`;
-    }
-
-    pagePlugins.forEach((plugin, index) => {
-      content += formatPluginLine(plugin);
-      if (index < pagePlugins.length - 1) content += '\n\n';
-    });
-
-    if (!isKettu) {
-      content += '\n​\n-# hold this message (not the links) to install';
-    }
-
-    const rows = buildPaginationRow(page, totalPages, search, author, pagePlugins, isKettu);
-    await message.reply({ content, components: rows });
   },
 
   async autocomplete(interaction) {
