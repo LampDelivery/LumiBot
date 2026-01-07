@@ -123,6 +123,7 @@ async function updateHuskboard(message, count, starboardChannelId, minStars) {
     }
   } else {
 
+    // Custom huskboard profile via webhook
     const isHuskboardChannel = message.channelId === STARBOARD_CHANNEL_ID;
     
     const webhookData = {
