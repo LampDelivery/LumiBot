@@ -7,14 +7,112 @@ module.exports = {
     const STARBOARD_CHANNEL_ID = '832767334904102982';
     const MIN_STARS = 4;
 
+    async function updateHuskboard(message, count, starboardChannelId, minStars) {
+      const starboardChannel = message.client.channels.cache.get(starboardChannelId);
+      if (!starboardChannel) return;
+
+      const messages = await starboardChannel.messages.fetch({ limit: 100 });
+      const starboardMsg = messages.find(m => 
+        m.author.id === message.client.user.id &&
+        m.embeds.length > 0 && 
+        m.embeds[m.embeds.length - 1].footer && 
+        m.embeds[m.embeds.length - 1].footer.text.endsWith(message.id)
+      );
+
+      if (count < minStars) {
+        if (starboardMsg) {
+          try {
+            await starboardMsg.delete();
+          } catch (err) {
+            console.error('Failed to delete huskboard message:', err);
+          }
+        }
+        return;
+      }
+
+      const emote = getStarboardEmote(count);
+      const content = `${emote} ${count} | <#${message.channelId}>`;
+      
+      const mainEmbed = generateMessageEmbed(message, false);
+      const embeds = [];
+      
+      if (message.reference) {
+        try {
+          const referencedMsg = await message.fetchReference();
+          embeds.push(generateMessageEmbed(referencedMsg, true));
+        } catch (err) {
+          console.error('Failed to fetch reference for huskboard:', err);
+        }
+      }
+      embeds.push(mainEmbed);
+
+      const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+      const jumpButton = new ButtonBuilder()
+        .setLabel('Jump')
+        .setURL(message.url)
+        .setStyle(ButtonStyle.Link);
+        
+      const components = [new ActionRowBuilder().addComponents(jumpButton)];
+      
+      if (message.reference) {
+        try {
+          const referencedMsg = await message.fetchReference();
+          const jumpRefButton = new ButtonBuilder()
+            .setLabel('Jump to referenced message')
+            .setURL(referencedMsg.url)
+            .setStyle(ButtonStyle.Link);
+          components[0].addComponents(jumpRefButton);
+        } catch {}
+      }
+
+      if (starboardMsg) {
+        if (starboardMsg.content !== content) {
+          await starboardMsg.edit({ content, embeds, components });
+        }
+      } else {
+
+        // Custom huskboard profile via webhook
+        const isHuskboardChannel = message.channelId === STARBOARD_CHANNEL_ID;
+        
+        const webhookData = {
+          username: isHuskboardChannel ? 'Huskboard' : message.client.user.username,
+          avatarURL: isHuskboardChannel ? 'https://files.catbox.moe/y7a4m5.webp' : message.client.user.displayAvatarURL()
+        };
+        
+        try {
+          const webhooks = await starboardChannel.fetchWebhooks();
+          let webhook = webhooks.find(wh => wh.owner.id === message.client.user.id);
+
+          if (!webhook) {
+            webhook = await starboardChannel.createWebhook({
+              name: 'Huskboard Webhook',
+              avatar: message.client.user.displayAvatarURL(),
+            });
+          }
+
+          await webhook.send({
+            content,
+            embeds,
+            components,
+            username: webhookData.username,
+            avatarURL: webhookData.avatarURL
+          });
+        } catch (err) {
+          console.error('Failed to send via webhook, falling back to standard send:', err);
+          await starboardChannel.send({ content, embeds, components });
+        }
+      }
+    }
+
     client.on('messageReactionAdd', async (reaction, user) => {
       if (reaction.partial) await reaction.fetch();
       if (reaction.message.partial) await reaction.message.fetch();
 
-      const targetChannel = client.channels.cache.get(STARBOARD_CHANNEL_ID);
-      if (!targetChannel || reaction.message.guildId !== targetChannel.guildId) return;
+      const STAR_EMOJI = 'husk';
+      const TARGET_CHANNEL_ID = '832767334904102982';
 
-      if (reaction.emoji.name !== STARBOARD_EMOJI_NAME) return;
+      if (reaction.emoji.name !== STAR_EMOJI) return;
+
       if (reaction.message.author.id === user.id) {
         try {
           await reaction.users.remove(user.id);
@@ -24,137 +122,47 @@ module.exports = {
         return;
       }
 
-      if (!reaction.message.content && reaction.message.attachments.size === 0) {
-        return;
+      let targetChannel = client.channels.cache.get(TARGET_CHANNEL_ID);
+      if (!targetChannel) {
+        try {
+          targetChannel = await client.channels.fetch(TARGET_CHANNEL_ID);
+        } catch (e) {
+          return;
+        }
       }
 
-      const starReaction = reaction.message.reactions.cache.find(r => r.emoji.name === STARBOARD_EMOJI_NAME);
+      const starReaction = reaction.message.reactions.cache.find(r => r.emoji.name === STAR_EMOJI);
       const count = starReaction ? starReaction.count : 0;
       
-      await updateHuskboard(reaction.message, count, STARBOARD_CHANNEL_ID, MIN_STARS);
+      if (count >= 4) {
+        await updateHuskboard(reaction.message, count, TARGET_CHANNEL_ID, 4);
+      }
     });
 
     client.on('messageReactionRemove', async (reaction, user) => {
       if (reaction.partial) await reaction.fetch();
       if (reaction.message.partial) await reaction.message.fetch();
 
-      const targetChannel = client.channels.cache.get(STARBOARD_CHANNEL_ID);
-      if (!targetChannel || reaction.message.guildId !== targetChannel.guildId) return;
+      const STAR_EMOJI = 'husk';
+      const TARGET_CHANNEL_ID = '832767334904102982';
 
-      if (reaction.emoji.name !== STARBOARD_EMOJI_NAME) return;
+      if (reaction.emoji.name !== STAR_EMOJI) return;
       
-      const starReaction = reaction.message.reactions.cache.find(r => r.emoji.name === STARBOARD_EMOJI_NAME);
+      const starReaction = reaction.message.reactions.cache.find(r => r.emoji.name === STAR_EMOJI);
       const count = starReaction ? starReaction.count : 0;
-      await updateHuskboard(reaction.message, count, STARBOARD_CHANNEL_ID, MIN_STARS);
+      await updateHuskboard(reaction.message, count, TARGET_CHANNEL_ID, 4);
     });
 
     client.on('messageReactionRemoveAll', async (message) => {
       if (message.partial) await message.fetch();
-      await updateHuskboard(message, 0, STARBOARD_CHANNEL_ID, MIN_STARS);
+      await updateHuskboard(message, 0, '832767334904102982', 4);
     });
 
     client.on('messageDelete', async (message) => {
-      await updateHuskboard(message, 0, STARBOARD_CHANNEL_ID, MIN_STARS);
+      await updateHuskboard(message, 0, '832767334904102982', 4);
     });
   }
 };
-
-async function updateHuskboard(message, count, starboardChannelId, minStars) {
-  const starboardChannel = message.client.channels.cache.get(starboardChannelId);
-  if (!starboardChannel) return;
-
-  const messages = await starboardChannel.messages.fetch({ limit: 100 });
-  const starboardMsg = messages.find(m => 
-    m.author.id === message.client.user.id &&
-    m.embeds.length > 0 && 
-    m.embeds[m.embeds.length - 1].footer && 
-    m.embeds[m.embeds.length - 1].footer.text.endsWith(message.id)
-  );
-
-  if (count < minStars) {
-    if (starboardMsg) {
-      try {
-        await starboardMsg.delete();
-      } catch (err) {
-        console.error('Failed to delete huskboard message:', err);
-      }
-    }
-    return;
-  }
-
-  const emote = getStarboardEmote(count);
-  const content = `${emote} ${count} | <#${message.channelId}>`;
-  
-  const mainEmbed = generateMessageEmbed(message, false);
-  const embeds = [];
-  
-  if (message.reference) {
-    try {
-      const referencedMsg = await message.fetchReference();
-      embeds.push(generateMessageEmbed(referencedMsg, true));
-    } catch (err) {
-      console.error('Failed to fetch reference for huskboard:', err);
-    }
-  }
-  embeds.push(mainEmbed);
-
-  const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-  const jumpButton = new ButtonBuilder()
-    .setLabel('Jump')
-    .setURL(message.url)
-    .setStyle(ButtonStyle.Link);
-    
-  const components = [new ActionRowBuilder().addComponents(jumpButton)];
-  
-  if (message.reference) {
-    try {
-      const referencedMsg = await message.fetchReference();
-      const jumpRefButton = new ButtonBuilder()
-        .setLabel('Jump to referenced message')
-        .setURL(referencedMsg.url)
-        .setStyle(ButtonStyle.Link);
-      components[0].addComponents(jumpRefButton);
-    } catch {}
-  }
-
-  if (starboardMsg) {
-    if (starboardMsg.content !== content) {
-      await starboardMsg.edit({ content, embeds, components });
-    }
-  } else {
-
-    // Custom huskboard profile via webhook
-    const isHuskboardChannel = message.channelId === STARBOARD_CHANNEL_ID;
-    
-    const webhookData = {
-      username: isHuskboardChannel ? 'Huskboard' : message.client.user.username,
-      avatarURL: isHuskboardChannel ? 'https://files.catbox.moe/y7a4m5.webp' : message.client.user.displayAvatarURL()
-    };
-    
-    try {
-      const webhooks = await starboardChannel.fetchWebhooks();
-      let webhook = webhooks.find(wh => wh.owner.id === message.client.user.id);
-
-      if (!webhook) {
-        webhook = await starboardChannel.createWebhook({
-          name: 'Huskboard Webhook',
-          avatar: message.client.user.displayAvatarURL(),
-        });
-      }
-
-      await webhook.send({
-        content,
-        embeds,
-        components,
-        username: webhookData.username,
-        avatarURL: webhookData.avatarURL
-      });
-    } catch (err) {
-      console.error('Failed to send via webhook, falling back to standard send:', err);
-      await starboardChannel.send({ content, embeds, components });
-    }
-  }
-}
 
 function getStarboardEmote(count) {
   if (count >= 10) return '<:husker:1041822220479111238>'; // Tier 3
